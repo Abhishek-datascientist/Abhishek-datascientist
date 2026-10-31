@@ -28,6 +28,7 @@ create table if not exists public.expenses (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users (id) on delete cascade,
   household_id uuid references public.households (id) on delete cascade,
+  member_id uuid references auth.users (id) on delete set null,
   created_by uuid references auth.users (id) on delete set null,
   merchant text not null check (merchant in (
     'Express Delivery App',
@@ -58,6 +59,7 @@ create table if not exists public.expenses (
 );
 
 alter table public.expenses add column if not exists household_id uuid references public.households (id) on delete cascade;
+alter table public.expenses add column if not exists member_id uuid references auth.users (id) on delete set null;
 alter table public.expenses add column if not exists created_by uuid references auth.users (id) on delete set null;
 alter table public.expenses add column if not exists merchant_name text;
 alter table public.expenses alter column user_id drop not null;
@@ -82,6 +84,51 @@ update public.expenses
 set created_by = user_id
 where created_by is null and user_id is not null;
 
+update public.expenses
+set member_id = coalesce(user_id, created_by)
+where member_id is null;
+
+create table if not exists public.household_finances (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  member_id uuid not null references auth.users (id) on delete cascade,
+  created_by uuid not null references auth.users (id) on delete restrict,
+  kind text not null check (kind in ('earning', 'investment', 'loan_repayment')),
+  category text not null check (length(trim(category)) between 1 and 60),
+  description text not null check (length(trim(description)) between 1 and 120),
+  record_date date not null,
+  amount numeric(12, 2) not null check (amount > 0),
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.household_loans (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  member_id uuid not null references auth.users (id) on delete cascade,
+  created_by uuid not null references auth.users (id) on delete restrict,
+  name text not null check (length(trim(name)) between 1 and 120),
+  lender text not null check (length(trim(lender)) between 1 and 120),
+  principal numeric(12, 2) not null check (principal > 0),
+  emi_amount numeric(12, 2) not null check (emi_amount > 0),
+  due_day smallint not null check (due_day between 1 and 31),
+  start_date date not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists public.household_loan_payments (
+  id uuid primary key default gen_random_uuid(),
+  household_id uuid not null references public.households (id) on delete cascade,
+  loan_id uuid not null references public.household_loans (id) on delete cascade,
+  member_id uuid not null references auth.users (id) on delete cascade,
+  created_by uuid not null references auth.users (id) on delete restrict,
+  period_month date not null check (extract(day from period_month) = 1),
+  payment_date date not null,
+  amount numeric(12, 2) not null check (amount > 0),
+  created_at timestamptz not null default now(),
+  unique (loan_id, period_month)
+);
+
 create index if not exists household_members_user_idx
   on public.household_members (user_id);
 create index if not exists household_invites_household_idx
@@ -90,6 +137,16 @@ create index if not exists expenses_household_date_idx
   on public.expenses (household_id, expense_date desc, created_at desc);
 create index if not exists expenses_household_creator_idx
   on public.expenses (household_id, created_by, expense_date desc);
+create index if not exists household_finances_household_date_idx
+  on public.household_finances (household_id, record_date desc, created_at desc);
+create index if not exists household_finances_member_date_idx
+  on public.household_finances (household_id, member_id, record_date desc);
+create index if not exists household_loans_household_member_idx
+  on public.household_loans (household_id, member_id, active);
+create index if not exists household_loan_payments_household_period_idx
+  on public.household_loan_payments (household_id, period_month desc);
+create index if not exists household_loan_payments_loan_period_idx
+  on public.household_loan_payments (loan_id, period_month desc);
 
 create or replace function public.is_household_member(p_household_id uuid)
 returns boolean
@@ -250,10 +307,31 @@ create trigger expenses_keep_creator
 before update on public.expenses
 for each row execute function public.keep_expense_creator();
 
+create or replace function public.keep_finance_creator()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if old.created_by is distinct from new.created_by then
+    raise exception 'Finance record creator cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists household_finances_keep_creator on public.household_finances;
+create trigger household_finances_keep_creator
+before update on public.household_finances
+for each row execute function public.keep_finance_creator();
+
 alter table public.households enable row level security;
 alter table public.household_members enable row level security;
 alter table public.household_invites enable row level security;
 alter table public.expenses enable row level security;
+alter table public.household_finances enable row level security;
+alter table public.household_loans enable row level security;
+alter table public.household_loan_payments enable row level security;
 
 drop policy if exists "Users manage their own expenses" on public.expenses;
 drop policy if exists "Household members read expenses" on public.expenses;
@@ -265,14 +343,116 @@ create policy "Household members read expenses"
   using (public.is_household_member(household_id));
 create policy "Household members add expenses"
   on public.expenses for insert to authenticated
-  with check (public.is_household_member(household_id) and created_by = (select auth.uid()));
+  with check (
+    public.is_household_member(household_id)
+    and created_by = (select auth.uid())
+    and exists (
+      select 1 from public.household_members target
+      where target.household_id = expenses.household_id
+        and target.user_id = expenses.member_id
+    )
+    and (member_id = (select auth.uid()) or public.is_household_admin(household_id))
+  );
 create policy "Household members edit expenses"
   on public.expenses for update to authenticated
-  using (public.is_household_member(household_id))
-  with check (public.is_household_member(household_id));
+  using (
+    public.is_household_admin(household_id)
+    or member_id = (select auth.uid())
+  )
+  with check (
+    public.is_household_member(household_id)
+    and (
+      member_id is null
+      or exists (
+        select 1 from public.household_members target
+        where target.household_id = expenses.household_id
+          and target.user_id = expenses.member_id
+      )
+    )
+    and (member_id = (select auth.uid()) or public.is_household_admin(household_id))
+  );
 create policy "Household members delete expenses"
   on public.expenses for delete to authenticated
+  using (
+    public.is_household_admin(household_id)
+    or member_id = (select auth.uid())
+  );
+
+drop policy if exists "Household members read finance records" on public.household_finances;
+drop policy if exists "Household members add finance records" on public.household_finances;
+drop policy if exists "Household owners update finance records" on public.household_finances;
+drop policy if exists "Household owners delete finance records" on public.household_finances;
+create policy "Household members read finance records"
+  on public.household_finances for select to authenticated
   using (public.is_household_member(household_id));
+create policy "Household members add finance records"
+  on public.household_finances for insert to authenticated
+  with check (
+    public.is_household_member(household_id)
+    and created_by = (select auth.uid())
+    and exists (
+      select 1 from public.household_members target
+      where target.household_id = household_finances.household_id
+        and target.user_id = household_finances.member_id
+    )
+    and (member_id = (select auth.uid()) or public.is_household_admin(household_id))
+  );
+create policy "Household owners update finance records"
+  on public.household_finances for update to authenticated
+  using (public.is_household_admin(household_id))
+  with check (
+    public.is_household_admin(household_id)
+    and exists (
+      select 1 from public.household_members target
+      where target.household_id = household_finances.household_id
+        and target.user_id = household_finances.member_id
+    )
+  );
+create policy "Household owners delete finance records"
+  on public.household_finances for delete to authenticated
+  using (public.is_household_admin(household_id));
+
+drop policy if exists "Household members read loans" on public.household_loans;
+drop policy if exists "Household members add loans" on public.household_loans;
+create policy "Household members read loans"
+  on public.household_loans for select to authenticated
+  using (public.is_household_member(household_id));
+create policy "Household members add loans"
+  on public.household_loans for insert to authenticated
+  with check (
+    public.is_household_member(household_id)
+    and created_by = (select auth.uid())
+    and exists (
+      select 1 from public.household_members target
+      where target.household_id = household_loans.household_id
+        and target.user_id = household_loans.member_id
+    )
+    and (member_id = (select auth.uid()) or public.is_household_admin(household_id))
+  );
+
+drop policy if exists "Household members read loan payments" on public.household_loan_payments;
+drop policy if exists "Household members add loan payments" on public.household_loan_payments;
+create policy "Household members read loan payments"
+  on public.household_loan_payments for select to authenticated
+  using (public.is_household_member(household_id));
+create policy "Household members add loan payments"
+  on public.household_loan_payments for insert to authenticated
+  with check (
+    public.is_household_member(household_id)
+    and created_by = (select auth.uid())
+    and exists (
+      select 1
+      from public.household_loans loan
+      join public.household_members target
+        on target.household_id = loan.household_id
+       and target.user_id = loan.member_id
+      where loan.id = household_loan_payments.loan_id
+        and loan.household_id = household_loan_payments.household_id
+        and loan.member_id = household_loan_payments.member_id
+        and loan.active
+    )
+    and (member_id = (select auth.uid()) or public.is_household_admin(household_id))
+  );
 
 drop policy if exists "Members read their household" on public.households;
 drop policy if exists "Admins update their household" on public.households;
@@ -306,4 +486,6 @@ grant execute on function public.create_household_invite(uuid, text) to authenti
 grant execute on function public.accept_household_invite(uuid) to authenticated;
 
 grant select, insert, update, delete on public.expenses to authenticated;
+grant select, insert, update, delete on public.household_finances to authenticated;
+grant select, insert on public.household_loans, public.household_loan_payments to authenticated;
 grant select on public.households, public.household_members, public.household_invites to authenticated;

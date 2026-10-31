@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { House, KeyRound, UsersRound, Wallet } from 'lucide-react';
 
-function HouseholdSetup({ email, error, busy, onCreate, onJoin }) {
+function HouseholdSetup({ email, error, busy, onCreate, onJoin, accountMethods }) {
   const [householdName, setHouseholdName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
@@ -36,6 +36,7 @@ function HouseholdSetup({ email, error, busy, onCreate, onJoin }) {
 
         {error && <p className="auth-feedback auth-error" role="alert">{error}</p>}
         <p className="auth-footnote">Invite codes are single-use and tied to the invited email address.</p>
+        {accountMethods}
       </section>
     </main>
   );

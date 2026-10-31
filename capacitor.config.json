@@ -1,0 +1,5 @@
+{
+  "appId": "com.pockettracker.app",
+  "appName": "PocketTracker",
+  "webDir": "dist"
+}
