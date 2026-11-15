@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowDownRight, ArrowUpRight, CalendarDays, IndianRupee, PiggyBank } from 'lucide-react';
+import { ArrowDownRight, ArrowUpRight, CalendarDays, IndianRupee, PiggyBank, Trash2 } from 'lucide-react';
 
 const earningCategories = ['Salary', 'Business income', 'Freelance', 'Rental income', 'Other income'];
 const savingsCategories = ['Investment'];
 
-function FinanceModule({ module, month, records, members, session, householdId, householdRole, saving, onSave, formatCurrency, formatDate, onNavigateLoans }) {
+function FinanceModule({ module, month, records, members, session, householdId, householdRole, saving, onSave, onDelete, formatCurrency, formatDate, onNavigateLoans }) {
   const isEarnings = module === 'earnings';
   const title = isEarnings ? 'Earnings' : 'Savings';
   const categories = isEarnings ? earningCategories : savingsCategories;
@@ -119,6 +119,7 @@ function FinanceModule({ module, month, records, members, session, householdId, 
                   <span className={`table-merchant-icon ${isEarnings ? 'mint' : 'lavender'}`}>{isEarnings ? <ArrowDownRight size={14} /> : <PiggyBank size={14} />}</span>
                   <div className="finance-record-copy"><strong>{record.description}</strong><span>{record.category} · {formatDate(record.date)}{showMemberPicker && member ? ` · For ${member.email || 'Household member'}` : ''}{record.createdBy && record.createdBy !== record.memberId && enteredBy ? ` · Added by ${enteredBy.email || 'Household admin'}` : ''}</span></div>
                   <strong className="table-amount">{formatCurrency(record.amount)}</strong>
+                  {onDelete && <button className="icon-button delete-button" type="button" onClick={() => onDelete(record.id)} aria-label={`Delete ${record.description}`} title="Delete record"><Trash2 size={13} /></button>}
                 </article>
               );
             })}

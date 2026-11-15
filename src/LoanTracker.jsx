@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, Check, CirclePlus, CreditCard, IndianRupee } from 'lucide-react';
+import { CalendarDays, Check, CirclePlus, CreditCard, IndianRupee, Trash2 } from 'lucide-react';
 
 function expectedDueDate(month, dueDay) {
   const [year, monthNumber] = month.split('-').map(Number);
@@ -12,7 +12,7 @@ function currentLocalDate() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
-function LoanTracker({ loans, payments, members, session, householdRole, month, saving, onCreateLoan, onRecordPayment, formatCurrency, formatDate }) {
+function LoanTracker({ loans, payments, members, session, householdRole, month, saving, onCreateLoan, onRecordPayment, onDeletePayment, formatCurrency, formatDate }) {
   const [name, setName] = useState('');
   const [lender, setLender] = useState('');
   const [principal, setPrincipal] = useState('');
@@ -148,7 +148,7 @@ function LoanTracker({ loans, payments, members, session, householdRole, month, 
                   ) : (
                     <button className="loan-pay-button" type="button" onClick={() => beginPayment(loan)}>Record this month’s EMI payment</button>
                   )}
-                  <div className="loan-payment-history"><strong>Recent payments</strong>{payments.filter((item) => item.loanId === loan.id).sort((first, second) => second.periodMonth.localeCompare(first.periodMonth)).slice(0, 4).map((item) => <span key={item.id}>{formatDate(`${item.periodMonth}-01`, { month: 'short', year: 'numeric' })} · {formatCurrency(item.amount)} · Paid {formatDate(item.paymentDate)}</span>)}{!payments.some((item) => item.loanId === loan.id) && <span>No EMI payments recorded yet.</span>}</div>
+                  <div className="loan-payment-history"><strong>Recent payments</strong>{payments.filter((item) => item.loanId === loan.id).sort((first, second) => second.periodMonth.localeCompare(first.periodMonth)).slice(0, 4).map((item) => <div key={item.id} className="recent-payment-row"><span>{formatDate(`${item.periodMonth}-01`, { month: 'short', year: 'numeric' })} · {formatCurrency(item.amount)} · Paid {formatDate(item.paymentDate)}</span>{onDeletePayment && <button className="icon-button delete-button" type="button" onClick={() => onDeletePayment(item.id)} aria-label="Delete payment" title="Delete payment"><Trash2 size={13} /></button>}</div>)}{!payments.some((item) => item.loanId === loan.id) && <span>No EMI payments recorded yet.</span>}</div>
                 </article>
               );
             })}

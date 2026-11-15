@@ -633,6 +633,32 @@ function ExpenseTracker() {
     return true;
   }
 
+  async function deleteFinanceRecord(id) {
+    if (supabase && session) {
+      const { error: deleteError } = await supabase.from('household_finances').delete().eq('id', id);
+      if (deleteError) {
+        setDataError(deleteError.message);
+        return;
+      }
+      setFinanceRecords((currentRecords) => currentRecords.filter((record) => record.id !== id));
+    } else {
+      saveFinanceRecords(financeRecords.filter((record) => record.id !== id));
+    }
+  }
+
+  async function deleteLoanPayment(id) {
+    if (supabase && session) {
+      const { error: deleteError } = await supabase.from('household_loan_payments').delete().eq('id', id);
+      if (deleteError) {
+        setDataError(deleteError.message);
+        return;
+      }
+      setLoanPayments((currentPayments) => currentPayments.filter((payment) => payment.id !== id));
+    } else {
+      saveLoanPayments(loanPayments.filter((payment) => payment.id !== id));
+    }
+  }
+
   async function refreshHousehold() {
     if (!session) return;
     setHouseholdReady(false);
@@ -1141,9 +1167,9 @@ function ExpenseTracker() {
           </>
         )}
 
-        {activePage === 'earnings' && <FinanceModule module="earnings" month={selectedMonth} records={allFinanceRecords} members={members} session={session} householdId={householdId} householdRole={householdRole} saving={financeSaving} onSave={addFinanceRecord} formatCurrency={formatCurrency} formatDate={formatDate} />}
-        {activePage === 'savings' && <FinanceModule module="savings" month={selectedMonth} records={allFinanceRecords} members={members} session={session} householdId={householdId} householdRole={householdRole} saving={financeSaving} onSave={addFinanceRecord} formatCurrency={formatCurrency} formatDate={formatDate} onNavigateLoans={() => setActivePage('loans')} />}
-        {activePage === 'loans' && <LoanTracker loans={loans} payments={loanPayments} members={members} session={session} householdRole={householdRole} month={selectedMonth} saving={financeSaving} onCreateLoan={createLoan} onRecordPayment={recordLoanPayment} formatCurrency={formatCurrency} formatDate={formatDate} />}
+        {activePage === 'earnings' && <FinanceModule module="earnings" month={selectedMonth} records={allFinanceRecords} members={members} session={session} householdId={householdId} householdRole={householdRole} saving={financeSaving} onSave={addFinanceRecord} onDelete={deleteFinanceRecord} formatCurrency={formatCurrency} formatDate={formatDate} />}
+        {activePage === 'savings' && <FinanceModule module="savings" month={selectedMonth} records={allFinanceRecords} members={members} session={session} householdId={householdId} householdRole={householdRole} saving={financeSaving} onSave={addFinanceRecord} onDelete={deleteFinanceRecord} formatCurrency={formatCurrency} formatDate={formatDate} onNavigateLoans={() => setActivePage('loans')} />}
+        {activePage === 'loans' && <LoanTracker loans={loans} payments={loanPayments} members={members} session={session} householdRole={householdRole} month={selectedMonth} saving={financeSaving} onCreateLoan={createLoan} onRecordPayment={recordLoanPayment} onDeletePayment={deleteLoanPayment} formatCurrency={formatCurrency} formatDate={formatDate} />}
         {activePage === 'history' && <HistoryModule expenses={entries} records={allFinanceRecords} members={members} month={selectedMonth} formatCurrency={formatCurrency} formatDate={formatDate} onMonthChange={changeSelectedMonth} />}
 
         {activePage === 'expenses' && <>
