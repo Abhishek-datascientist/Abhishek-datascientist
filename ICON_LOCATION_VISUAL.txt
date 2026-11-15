@@ -1,0 +1,329 @@
+╔════════════════════════════════════════════════════════════════════╗
+║                                                                    ║
+║         ANDROID APP ICON CONFIGURATION - VISUAL GUIDE             ║
+║                   PocketTracker Expense Tracker                   ║
+║                                                                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+
+📍 QUICK ANSWER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The Android app icon is configured in 4 locations:
+
+1. android/app/src/main/AndroidManifest.xml (Configuration)
+2. android/app/src/main/res/mipmap-mdpi/ (Low DPI icon files)
+3. android/app/src/main/res/mipmap-hdpi/ (High DPI icon files)
+4. android/app/src/main/res/mipmap-xhdpi/ (Extra High DPI icon files)
+   + mipmap-xxhdpi/ (Extra Extra High DPI)
+   + mipmap-xxxhdpi/ (Extra Extra Extra High DPI)
+   + mipmap-anydpi-v26/ (Adaptive icon for Android 8+)
+   + values/ (Colors for adaptive icon)
+
+
+═══════════════════════════════════════════════════════════════════════
+PROJECT STRUCTURE - SHOWING ICON LOCATIONS
+═══════════════════════════════════════════════════════════════════════
+
+C:\Git\
+│
+└─ android/
+   └─ app/
+      └─ src/
+         └─ main/
+            │
+            ├─ 📄 AndroidManifest.xml ◄─────── CONFIGURATION FILE
+            │   └─ Lines 6-7:
+            │      android:icon="@mipmap/ic_launcher"
+            │      android:roundIcon="@mipmap/ic_launcher_round"
+            │
+            └─ res/  ◄───────────────────── ICON FILES DIRECTORY
+               │
+               ├─ 📁 mipmap-mdpi/ ────────────┐
+               │   ├─ ic_launcher.png         │
+               │   ├─ ic_launcher_round.png   │ 160 DPI
+               │   └─ ic_launcher_foreground  │ (Small phones)
+               │                              │
+               ├─ 📁 mipmap-hdpi/ ────────────┤
+               │   ├─ ic_launcher.png         │
+               │   ├─ ic_launcher_round.png   │ 240 DPI
+               │   └─ ic_launcher_foreground  │ (Old tablets)
+               │                              │
+               ├─ 📁 mipmap-xhdpi/ ───────────┤
+               │   ├─ ic_launcher.png         │
+               │   ├─ ic_launcher_round.png   │ 320 DPI
+               │   └─ ic_launcher_foreground  │ (Medium phones)
+               │                              │
+               ├─ 📁 mipmap-xxhdpi/ ──────────┤
+               │   ├─ ic_launcher.png         │
+               │   ├─ ic_launcher_round.png   │ 480 DPI
+               │   └─ ic_launcher_foreground  │ (Large phones)
+               │                              │
+               ├─ 📁 mipmap-xxxhdpi/ ─────────┤
+               │   ├─ ic_launcher.png         │
+               │   ├─ ic_launcher_round.png   │ 640 DPI
+               │   └─ ic_launcher_foreground  │ (Large tablets)
+               │                              │
+               ├─ 📁 mipmap-anydpi-v26/ ──────┤ Android 8.0+
+               │   ├─ ic_launcher.xml         │ (Adaptive icon)
+               │   └─ ic_launcher_round.xml   │
+               │
+               └─ 📁 values/
+                   └─ ic_launcher_background.xml
+                      └─ Defines background color (#FFFFFF)
+
+
+═══════════════════════════════════════════════════════════════════════
+STEP-BY-STEP: HOW THE ICON IS CONFIGURED
+═══════════════════════════════════════════════════════════════════════
+
+STEP 1: Android Reads Configuration
+─────────────────────────────────────
+
+   When Android installs the app, it reads:
+   
+   android/app/src/main/AndroidManifest.xml
+   ┌─────────────────────────────────────────────────────┐
+   │ <application                                        │
+   │     android:icon="@mipmap/ic_launcher"              │
+   │     android:roundIcon="@mipmap/ic_launcher_round"   │
+   │ >                                                   │
+   └─────────────────────────────────────────────────────┘
+   
+   This tells Android:
+   • Main icon is called "ic_launcher"
+   • Round icon is called "ic_launcher_round"
+   • Both are in the mipmap directories
+
+
+STEP 2: Android Checks Device Specifications
+──────────────────────────────────────────────
+
+   ┌──────────────────┐
+   │  Device Info     │
+   ├──────────────────┤
+   │ Android Version  │
+   │ Screen Density   │
+   │ Screen Size      │
+   └──────────────────┘
+           │
+           ▼
+   "This is Android 10, 480 dpi device"
+
+
+STEP 3: Android Selects Appropriate Icon
+──────────────────────────────────────────
+
+   Is it Android 8.0 or higher?
+   │
+   ├─ YES → Use adaptive icon from mipmap-anydpi-v26/
+   │        ├─ ic_launcher.xml (tells Android to use)
+   │        ├─ ic_launcher_foreground.png (from mipmap-xxhdpi)
+   │        └─ Background color #FFFFFF (from values/)
+   │        
+   │        Result: Android applies system shape
+   │        (circle, rounded square, etc.)
+   │
+   └─ NO → Use regular icon based on DPI
+           ├─ 640 dpi? → mipmap-xxxhdpi/ic_launcher.png
+           ├─ 480 dpi? → mipmap-xxhdpi/ic_launcher.png
+           ├─ 320 dpi? → mipmap-xhdpi/ic_launcher.png
+           ├─ 240 dpi? → mipmap-hdpi/ic_launcher.png
+           └─ 160 dpi? → mipmap-mdpi/ic_launcher.png
+
+
+STEP 4: Icon Displayed on Device
+─────────────────────────────────
+
+   ┌──────────────────────────┐
+   │  App Launcher           │
+   │                          │
+   │   [App Icon Here]        │ ← Icon displayed!
+   │   PocketTracker          │
+   │                          │
+   └──────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════
+ICON FILES EXPLAINED
+═══════════════════════════════════════════════════════════════════════
+
+Three Different Icon Versions in Each DPI Folder:
+
+1️⃣  ic_launcher.png (Square Icon)
+    ┌──────────────────┐
+    │                  │
+    │   YOUR ICON      │
+    │   (Square)       │
+    │                  │
+    └──────────────────┘
+    • Square corners
+    • Standard size for that DPI
+    • Used on app drawer
+    • Used on home screen
+
+2️⃣  ic_launcher_round.png (Rounded Icon)
+    ╭──────────────────╮
+    │                  │
+    │   YOUR ICON      │
+    │   (Rounded)      │
+    │                  │
+    ╰──────────────────╯
+    • Rounded corners
+    • Same size as ic_launcher.png
+    • Used for app shortcuts
+    • Used on some device launchers
+
+3️⃣  ic_launcher_foreground.png (Adaptive Icon Image)
+    • Larger size (108dp minimum)
+    • Used only with Android 8+
+    • Combined with background color
+    • System applies shape on top
+    • Result: Adapts to device icon shape preferences
+
+
+═══════════════════════════════════════════════════════════════════════
+ACTUAL FILE LOCATIONS ON DISK
+═══════════════════════════════════════════════════════════════════════
+
+Configuration:
+  C:\Git\android\app\src\main\AndroidManifest.xml
+
+Icon Files (All under C:\Git\android\app\src\main\res\):
+
+Low DPI (160 dpi - 48×48 pixels):
+  C:\Git\android\app\src\main\res\mipmap-mdpi\ic_launcher.png
+  C:\Git\android\app\src\main\res\mipmap-mdpi\ic_launcher_round.png
+  C:\Git\android\app\src\main\res\mipmap-mdpi\ic_launcher_foreground.png
+
+High DPI (240 dpi - 72×72 pixels):
+  C:\Git\android\app\src\main\res\mipmap-hdpi\ic_launcher.png
+  C:\Git\android\app\src\main\res\mipmap-hdpi\ic_launcher_round.png
+  C:\Git\android\app\src\main\res\mipmap-hdpi\ic_launcher_foreground.png
+
+Extra High DPI (320 dpi - 96×96 pixels):
+  C:\Git\android\app\src\main\res\mipmap-xhdpi\ic_launcher.png
+  C:\Git\android\app\src\main\res\mipmap-xhdpi\ic_launcher_round.png
+  C:\Git\android\app\src\main\res\mipmap-xhdpi\ic_launcher_foreground.png
+
+Extra Extra High DPI (480 dpi - 144×144 pixels):
+  C:\Git\android\app\src\main\res\mipmap-xxhdpi\ic_launcher.png
+  C:\Git\android\app\src\main\res\mipmap-xxhdpi\ic_launcher_round.png
+  C:\Git\android\app\src\main\res\mipmap-xxhdpi\ic_launcher_foreground.png
+
+Extra Extra Extra High DPI (640 dpi - 192×192 pixels):
+  C:\Git\android\app\src\main\res\mipmap-xxxhdpi\ic_launcher.png
+  C:\Git\android\app\src\main\res\mipmap-xxxhdpi\ic_launcher_round.png
+  C:\Git\android\app\src\main\res\mipmap-xxxhdpi\ic_launcher_foreground.png
+
+Adaptive Icon (Android 8+ - XML definitions):
+  C:\Git\android\app\src\main\res\mipmap-anydpi-v26\ic_launcher.xml
+  C:\Git\android\app\src\main\res\mipmap-anydpi-v26\ic_launcher_round.xml
+
+Background Color:
+  C:\Git\android\app\src\main\res\values\ic_launcher_background.xml
+  └─ Contains: #FFFFFF (white)
+
+
+═══════════════════════════════════════════════════════════════════════
+ADAPTIVE ICON CONFIGURATION (Android 8+)
+═══════════════════════════════════════════════════════════════════════
+
+mipmap-anydpi-v26/ic_launcher.xml:
+┌─────────────────────────────────────────────┐
+│ <?xml version="1.0" encoding="utf-8"?>      │
+│ <adaptive-icon                              │
+│   xmlns:android="http://schemas.android..." │
+│ >                                           │
+│   <background                               │
+│     android:drawable=                       │
+│     "@color/ic_launcher_background"/>       │ ← Uses #FFFFFF
+│                                             │
+│   <foreground                               │
+│     android:drawable=                       │
+│     "@mipmap/ic_launcher_foreground"/>      │ ← Uses PNG image
+│                                             │
+│ </adaptive-icon>                            │
+└─────────────────────────────────────────────┘
+
+Background Color Definition:
+values/ic_launcher_background.xml:
+┌─────────────────────────────────────────────┐
+│ <?xml version="1.0" encoding="utf-8"?>      │
+│ <resources>                                 │
+│   <color name="ic_launcher_background">     │
+│     #FFFFFF                                 │
+│   </color>                                  │
+│ </resources>                                │
+└─────────────────────────────────────────────┘
+
+
+═══════════════════════════════════════════════════════════════════════
+SIZE REFERENCE
+═══════════════════════════════════════════════════════════════════════
+
+Android DPI Classification and Icon Sizes:
+
+DPI Bucket │ DPI Range │ Name      │ Square Icon │ Foreground
+────────────┼───────────┼──────────┼────────────┼────────────
+ldpi       │ ~120      │ Low       │ 36×36      │ 81×81
+mdpi       │ ~160      │ Medium    │ 48×48      │ 108×108    ← We support
+hdpi       │ ~240      │ High      │ 72×72      │ 162×162    ← We support
+xhdpi      │ ~320      │ X-High    │ 96×96      │ 216×216    ← We support
+xxhdpi     │ ~480      │ XX-High   │ 144×144    │ 324×324    ← We support
+xxxhdpi    │ ~640      │ XXX-High  │ 192×192    │ 432×432    ← We support
+                     Plus anydpi-v26 for adaptive icons
+
+
+═══════════════════════════════════════════════════════════════════════
+CURRENT STATUS - POCKETTRACKER
+═══════════════════════════════════════════════════════════════════════
+
+✅ AndroidManifest.xml Configuration
+   ├─ android:icon="@mipmap/ic_launcher"
+   ├─ android:roundIcon="@mipmap/ic_launcher_round"
+   └─ Both properly configured ✓
+
+✅ Icon Files Present
+   ├─ mipmap-mdpi/ ............ 3 files ✓
+   ├─ mipmap-hdpi/ ............ 3 files ✓
+   ├─ mipmap-xhdpi/ ........... 3 files ✓
+   ├─ mipmap-xxhdpi/ .......... 3 files ✓
+   ├─ mipmap-xxxhdpi/ ......... 3 files ✓
+   └─ mipmap-anydpi-v26/ ...... 2 XML files ✓
+
+✅ Background Color Defined
+   └─ values/ic_launcher_background.xml (#FFFFFF) ✓
+
+✅ Ready for
+   ├─ APK Build ✓
+   ├─ Play Store Upload ✓
+   └─ All Android Versions ✓
+
+
+═══════════════════════════════════════════════════════════════════════
+SUMMARY
+═══════════════════════════════════════════════════════════════════════
+
+WHERE IS THE ICON CONFIGURED?
+
+1. Configuration Entry Point:
+   → android/app/src/main/AndroidManifest.xml (lines 6-7)
+
+2. Icon Files Location:
+   → android/app/src/main/res/mipmap-*/ (5 folders)
+   → android/app/src/main/res/mipmap-anydpi-v26/ (1 folder)
+   → android/app/src/main/res/values/ (colors)
+
+3. Total Files:
+   → 17 PNG files + 2 XML files + 1 color definition = 20 icon-related files
+
+4. Coverage:
+   → All Android versions (2.3.3 to latest)
+   → All screen densities (160 dpi to 640 dpi)
+   → Adaptive icon support (Android 8.0+)
+
+Result: When user taps "Install" in Play Store, Android automatically
+        selects the right icon for their device!
+
+═══════════════════════════════════════════════════════════════════════
